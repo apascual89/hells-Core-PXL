@@ -56,11 +56,13 @@ static int panel_debug_base_open(struct inode *inode, struct file *file)
 static int panel_debug_base_release(struct inode *inode, struct file *file)
 {
 	struct mdss_debug_base *dbg = file->private_data;
+	mutex_lock(&mdss_debug_lock);
 	if (dbg && dbg->buf) {
 		kfree(dbg->buf);
 		dbg->buf_len = 0;
 		dbg->buf = NULL;
 	}
+	mutex_unlock(&mdss_debug_lock);
 	return 0;
 }
 
@@ -235,6 +237,9 @@ static ssize_t panel_debug_base_reg_read(struct file *file,
 	panel_reg_buf = kzalloc(reg_buf_len, GFP_KERNEL);
 
 	if (!rx_buf || !panel_reg_buf) {
+		kfree(rx_buf);
+		kfree(panel_reg_buf);
+		mutex_unlock(&mdss_debug_lock);
 		pr_err("not enough memory to hold panel reg dump\n");
 		return -ENOMEM;
 	}
@@ -276,7 +281,6 @@ read_reg_fail:
 	kfree(panel_reg_buf);
 	mutex_unlock(&mdss_debug_lock);
 	return -EFAULT;
-
 }
 
 static const struct file_operations panel_off_fops = {
@@ -374,11 +378,13 @@ static int mdss_debug_base_open(struct inode *inode, struct file *file)
 static int mdss_debug_base_release(struct inode *inode, struct file *file)
 {
 	struct mdss_debug_base *dbg = file->private_data;
+	mutex_lock(&mdss_debug_lock);
 	if (dbg && dbg->buf) {
 		kfree(dbg->buf);
 		dbg->buf_len = 0;
 		dbg->buf = NULL;
 	}
+	mutex_unlock(&mdss_debug_lock);
 	return 0;
 }
 
